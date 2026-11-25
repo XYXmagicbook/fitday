@@ -849,17 +849,26 @@
             document.querySelectorAll("input[data-role=obExact]").forEach(inp => {
               if (inp.value) dayTimesExact[inp.dataset.wd] = inp.value;
             });
-            A.S.profile = {
+            const profile = {
               name: d.name, sex: d.sex, age: +d.age, height: +d.height, weight: +d.weight,
               level: d.level, goal: d.goal, days: d.days, daysPerWeek: daysArr.length,
               timePref: d.timePref, equip: d.equip,
               activity: d.activity, trainPref: d.timePref,
               dayTimes: dayTimes, dayTimesExact: dayTimesExact
             };
-            window._obPlan = E.buildPlan(A.S.profile);
-            A.S.plan = window._obPlan;
-            A.S.ui.obStep = 4;
-            store.save(); A.render();
+            try {
+              const plan = E.buildPlan(profile);
+              window._obPlan = plan;
+              A.S.profile = profile;
+              A.S.plan = plan;
+              A.S.ui.obStep = 4;
+              store.save(); A.render();
+            } catch (error) {
+              console.error("FitDay plan generation failed", error);
+              A.S.ui.obStep = 3;
+              store.save(); A.render();
+              A.toast("计划生成失败，填写的信息已保留，请点击生成按钮重试。", true);
+            }
           }
         }, 700);
         break;
@@ -1480,6 +1489,8 @@
   if (!App.S.ui.obData.dayTimesExact) App.S.ui.obData.dayTimesExact = {};
   if (App.S.ui.calY === undefined) { App.S.ui.calY = today.getFullYear(); App.S.ui.calM = today.getMonth(); }
   if (!App.S.fired) App.S.fired = {};
+  // A saved spinner has no running timer after a reload; return to a retryable step.
+  if (!App.S.obDone && App.S.ui.obStep === 3.5) App.S.ui.obStep = 3;
   App.applyTheme(App.S.settings.theme);
   App.applyFont(App.S.settings.fontSize);
   /* 状态自愈：有档案无计划（如旧版本存档/生成中断）时自动重建 */
@@ -1511,25 +1522,15 @@
   setInterval(() => App.checkReminders(), 20000);
 
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "127.0.0.1" || location.hostname === "localhost")) {
-    try {
-      navigator.serviceWorker.register("sw.js").then(reg => {
-        /* SW 更新检测：发现新版本自动刷新页面 */
-        reg.addEventListener("updatefound", () => {
-          const newSW = reg.installing;
-          if (!newSW) return;
-          newSW.addEventListener("statechange", () => {
-            if (newSW.state === "activated" && navigator.serviceWorker.controller) {
-              /* 新 SW 已接管，刷新一次让页面加载最新资源 */
-              window.location.reload();
-            }
-          });
-        });
-      });
-      /* SW 接管后立即生效 */
-      navigator.serviceWorker.addEventListener("controllerchange", () => {
-        /* 防止循环刷新：只刷一次 */
-        if (!window._swReloaded) { window._swReloaded = true; window.location.reload(); }
-      });
-    } catch (e) { }
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch(error => {
+      console.warn("FitDay offline cache unavailable", error);
+    });
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!window._swReloaded && App.S.ui.obStep !== 3.5) {
+        window._swReloaded = true;
+        window.location.reload();
+      }
+    });
   }
 })();
+

@@ -462,6 +462,7 @@ window.FitEngine = (function () {
 
   /* ---------- 生成周课表 ---------- */
   const MEAL_SPLIT = {
+    recomp:  [{ name: "早餐", pct: 0.30, time: "07:30" }, { name: "午餐", pct: 0.40, time: "12:00" }, { name: "加餐", pct: 0.05, time: "15:30" }, { name: "晚餐", pct: 0.25, time: "18:30" }],
     fatloss: [{ name: "早餐", pct: 0.30, time: "07:30" }, { name: "午餐", pct: 0.40, time: "12:00" }, { name: "加餐", pct: 0.05, time: "15:30" }, { name: "晚餐", pct: 0.25, time: "18:30" }],
     muscle:  [{ name: "早餐", pct: 0.25, time: "07:30" }, { name: "午餐", pct: 0.35, time: "12:00" }, { name: "加餐(练后)", pct: 0.10, time: "15:30" }, { name: "晚餐", pct: 0.30, time: "18:30" }],
     keep:    [{ name: "早餐", pct: 0.30, time: "07:30" }, { name: "午餐", pct: 0.40, time: "12:00" }, { name: "加餐", pct: 0.05, time: "15:30" }, { name: "晚餐", pct: 0.25, time: "18:30" }]
@@ -540,7 +541,7 @@ window.FitEngine = (function () {
       }
     });
 
-    const meals = MEAL_SPLIT[goal].map(m => ({
+    const meals = (MEAL_SPLIT[goal] || MEAL_SPLIT.keep).map(m => ({
       name: m.name, time: m.time, pct: m.pct, kcal: r50(intake * m.pct)
     }));
 
@@ -796,3 +797,4 @@ window.FitEngine = (function () {
     coachDaily, coachAnswer, weightHistory
   };
 })();
+
